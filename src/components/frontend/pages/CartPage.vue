@@ -1,15 +1,12 @@
 <template>
   <div class="bg-gray-50 min-h-screen py-12">
     <div class="container mx-auto px-6">
-      <!-- Page Title -->
       <h1 class="text-3xl font-bold mb-8">🛒 Your Cart</h1>
 
-      <!-- Empty Cart -->
       <div v-if="cart.items.length === 0" class="text-center py-20 bg-white rounded-xl shadow">
         <p class="text-lg text-gray-600">Your cart is empty.</p>
       </div>
 
-      <!-- Cart Items -->
       <div v-else class="bg-white rounded-xl shadow p-6">
         <table class="w-full text-left">
           <thead>
@@ -23,26 +20,22 @@
           </thead>
           <tbody>
             <tr v-for="item in cart.items" :key="item.id" class="border-b">
-              <!-- Product Name + Optional Thumbnail -->
-              <td class="py-3 flex items-center gap-4">
-                <img v-if="item.image" :src="item.image" class="w-16 h-16 object-cover rounded" />
+              <td class="py-3 flex items-center gap-4"> 
+                <img v-if="item.image" :src="`http://127.0.0.1:8000/storage/${item.image}`" :alt="item.name" class="w-16 h-16 object-cover rounded">
+                <span v-else>No Image</span>
                 <span>{{ item.name }}</span>
               </td>
 
-              <!-- Price -->
-              <td class="py-3">${{ item.price.toFixed(2) }}</td>
+              <td class="py-3">${{ Number(item.price).toFixed(2) }}</td>
 
-              <!-- Quantity Controls -->
               <td class="py-3 flex items-center gap-2">
                 <button @click="decrease(item)" class="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300">-</button>
                 <span>{{ item.quantity }}</span>
                 <button @click="increase(item)" class="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300">+</button>
               </td>
 
-              <!-- Total per Product -->
-              <td class="py-3 font-semibold">${{ (item.price * item.quantity).toFixed(2) }}</td>
+              <td class="py-3 font-semibold">${{ (Number(item.price) * item.quantity).toFixed(2) }}</td>
 
-              <!-- Remove Button -->
               <td class="py-3">
                 <button @click="remove(item.id)" class="text-red-600 hover:underline">Remove</button>
               </td>
@@ -50,43 +43,141 @@
           </tbody>
         </table>
 
-        <!-- Cart Footer: Total + Checkout -->
         <div class="flex justify-between items-center mt-6">
           <h2 class="text-xl font-bold">Total: ${{ cart.totalPrice.toFixed(2) }}</h2>
-          <button class="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition">
+          <button @click="handleCheckout" class="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition">
             Checkout
           </button>
         </div>
+      </div>
+    </div>
+
+    <!-- Login/Register Popup -->
+    <div v-if="showAuthPopup" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div class="bg-white p-8 rounded-xl w-96">
+        <h2 class="text-xl font-bold mb-4">{{ isLoginMode ? 'Login' : 'Register' }}</h2>
+
+        <form @submit.prevent="isLoginMode ? login() : register()" class="space-y-4">
+          <input v-if="!isLoginMode" v-model="form.name" type="text" placeholder="Name" class="w-full px-4 py-2 border rounded" />
+          <input v-model="form.email" type="email" placeholder="Email" class="w-full px-4 py-2 border rounded" />
+          <input v-model="form.password" type="password" placeholder="Password" class="w-full px-4 py-2 border rounded" />
+
+          <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700">
+            {{ isLoginMode ? 'Login' : 'Register' }}
+          </button>
+        </form>
+
+        <p class="mt-4 text-center text-gray-500">
+          <span v-if="isLoginMode">Don't have an account?</span>
+          <span v-else>Already have an account?</span>
+          <button @click="toggleMode" class="text-indigo-600 underline ml-1">
+            {{ isLoginMode ? 'Register' : 'Login' }}
+          </button>
+        </p>
+
+        <button @click="showAuthPopup = false" class="mt-4 text-gray-500 underline">
+          Cancel
+        </button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
+import { ref, onMounted } from 'vue'
 import { useCartStore } from '@/stores/cart'
+import { useUserAuthStore } from '@/stores/userAuth'
+import { useRouter } from 'vue-router'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 
 const cart = useCartStore()
+const userAuth = useUserAuthStore()
+const router = useRouter()
 
-// Increase quantity
+const showAuthPopup = ref(false)
+const isLoginMode = ref(true)
+const form = ref({ name: '', email: '', password: '' })
+
+onMounted(() => {
+  cart.hydrateCart()
+})
+
 const increase = (item) => {
   cart.updateQuantity(item.id, item.quantity + 1)
   toast.success(`➕ Increased ${item.name}`)
 }
 
-// Decrease quantity
 const decrease = (item) => {
   cart.updateQuantity(item.id, item.quantity - 1)
   toast.info(`➖ Decreased ${item.name}`)
 }
 
-// Remove product
 const remove = (id) => {
-  const item = cart.items.find(p => p.id === id)
+  const item = cart.items.find((p) => p.id === id)
   if (item) {
     cart.removeFromCart(id)
     toast.error(`❌ Removed ${item.name}`)
   }
 }
+
+// Checkout button
+const handleCheckout = () => {
+  if (!userAuth.isLoggedIn) {
+    showAuthPopup.value = true
+  } else {
+    router.push('/checkout')
+  }
+}
+
+// Toggle between Login/Register
+const toggleMode = () => {
+  isLoginMode.value = !isLoginMode.value
+  form.value = { name: '', email: '', password: '' }
+}
+
+// Login function
+const login = async () => {
+  if (!form.value.email || !form.value.password) {
+    toast.error('Please fill all fields')
+    return
+  }
+  const success = await userAuth.login({ email: form.value.email, password: form.value.password })
+  if (success) {
+    toast.success('Login successful')
+    showAuthPopup.value = false 
+    setTimeout(() => {
+      router.push('/checkout')
+    }, 2000)
+  } else {
+    toast.error('Login failed')
+  }
+}
+
+// Register function
+const register = async () => {
+  if (!form.value.name || !form.value.email || !form.value.password) {
+    toast.error('Please fill all fields')
+    return
+  }
+
+  const success = await userAuth.register({ 
+    name: form.value.name, 
+    email: form.value.email, 
+    password: form.value.password 
+  })
+
+  if (success) {
+    toast.success('Registration successful')
+    showAuthPopup.value = false;
+    
+    toast.success('Registration Sucessful!')
+    setTimeout(() => {
+      router.push('/checkout')
+    }, 2000)
+  } else {
+    toast.error('Registration failed')
+  }
+}
+
 </script>

@@ -31,11 +31,14 @@
         </span>
       </router-link>
 
-        <router-link to="/profile">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-700 hover:text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A9 9 0 1118.879 6.196 9 9 0 015.121 17.804z"/>
-          </svg>
+        <router-link v-if="!userAuth.isLoggedIn" to="/login" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
+          Login
         </router-link>
+
+        <!-- Show Logout if logged in -->
+        <button v-else @click="logout" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
+          Logout
+        </button>
       </div>
 
       <!-- Mobile Menu -->
@@ -50,7 +53,17 @@
 
 
 <script setup>
-import { useCartStore } from '@/stores/cart'
+import { useCartStore } from '@/stores/cart' 
+import { useUserAuthStore } from '@/stores/userAuth'
+import { useRouter } from 'vue-router'
 
-const cart = useCartStore()
+const cart = useCartStore() 
+
+const userAuth = useUserAuthStore()
+const router = useRouter()
+
+const logout = () => {
+  userAuth.logout()        
+  router.push('/')        
+}
 </script>

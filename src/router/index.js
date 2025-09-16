@@ -9,6 +9,7 @@ import CartPage from '@/components/frontend/pages/CartPage.vue'
 // Frontend Pages 
 import HomePage from '@/components/frontend/pages/HomePage.vue'
 import ProductDetails from '@/components/frontend/pages/ProductDetails.vue'
+import CheckoutPage from '@/components/frontend/pages/CheckoutPage.vue'
 
 // Admin Pages
 import AdminLogin from '@/components/Login.vue'
@@ -52,6 +53,7 @@ const routes = [
       { path: '', component: HomePage, meta: { title: 'Home' } },     
       { path: '/product/:id', component: ProductDetails, props: true,meta: { title: 'Product Details' } }, 
       { path: '/cart', component: CartPage, meta: { title: 'Cart' }  },
+      { path: '/checkout', component: CheckoutPage, meta: { title: 'Checkout' }  },
       // { path: 'products', component: Products, meta: { title: 'Products' } },       
       // { path: 'orders', component: () => import('../components/Orders.vue'), meta: { title: 'Orders' } },
       // { path: 'customers', component: () => import('../components/Customers.vue'), meta: { title: 'Customers' } },

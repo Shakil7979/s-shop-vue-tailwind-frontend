@@ -6,27 +6,40 @@ export const useCartStore = defineStore('cart', {
     items: JSON.parse(localStorage.getItem('cart')) || [],
   }),
   getters: {
-    totalPrice: (state) => state.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
-    totalItems: (state) => state.items.reduce((sum, item) => sum + item.quantity, 0),
+    totalPrice: (state) =>
+      state.items.reduce(
+        (sum, item) => sum + Number(item.price) * item.quantity,
+        0
+      ),
+    totalItems: (state) =>
+      state.items.reduce((sum, item) => sum + item.quantity, 0),
   },
   actions: {
     saveCart() {
       localStorage.setItem('cart', JSON.stringify(this.items))
     },
+    hydrateCart() {
+      const saved = localStorage.getItem('cart')
+      this.items = saved ? JSON.parse(saved) : []
+    },
     addToCart(product, qty = 1) {
-      const existing = this.items.find(p => p.id === product.id)
+      const existing = this.items.find((p) => p.id === product.id)
       if (existing) {
         existing.quantity += qty
       } else {
-        this.items.push({ ...product, quantity: qty })
+        this.items.push({
+          ...product,
+          price: Number(product.price), // ✅ ensure numeric
+          quantity: qty,
+        })
       }
       this.saveCart()
     },
     updateQuantity(id, qty) {
-      const item = this.items.find(p => p.id === id)
+      const item = this.items.find((p) => p.id === id)
       if (item) {
         if (qty <= 0) {
-          this.items = this.items.filter(p => p.id !== id)
+          this.items = this.items.filter((p) => p.id !== id)
         } else {
           item.quantity = qty
         }
@@ -34,12 +47,12 @@ export const useCartStore = defineStore('cart', {
       this.saveCart()
     },
     removeFromCart(id) {
-      this.items = this.items.filter(p => p.id !== id)
+      this.items = this.items.filter((p) => p.id !== id)
       this.saveCart()
     },
     clearCart() {
       this.items = []
       this.saveCart()
-    }
-  }
+    },
+  },
 })
