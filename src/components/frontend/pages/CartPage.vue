@@ -25,17 +25,13 @@
                 <span v-else>No Image</span>
                 <span>{{ item.name }}</span>
               </td>
-
               <td class="py-3">${{ Number(item.price).toFixed(2) }}</td>
-
               <td class="py-3 flex items-center gap-2">
                 <button @click="decrease(item)" class="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300">-</button>
                 <span>{{ item.quantity }}</span>
                 <button @click="increase(item)" class="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300">+</button>
               </td>
-
               <td class="py-3 font-semibold">${{ (Number(item.price) * item.quantity).toFixed(2) }}</td>
-
               <td class="py-3">
                 <button @click="remove(item.id)" class="text-red-600 hover:underline">Remove</button>
               </td>
@@ -83,8 +79,11 @@
   </div>
 </template>
 
+
+
+
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useCartStore } from '@/stores/cart'
 import { useUserAuthStore } from '@/stores/userAuth'
 import { useRouter } from 'vue-router'
@@ -95,27 +94,32 @@ const cart = useCartStore()
 const userAuth = useUserAuthStore()
 const router = useRouter()
 
+// Popup & Mode
 const showAuthPopup = ref(false)
 const isLoginMode = ref(true)
-const form = ref({ name: '', email: '', password: '' })
+const form = reactive({ name: '', email: '', password: '' })
 
-onMounted(() => {
+onMounted(async () => {
   cart.hydrateCart()
+  if (!userAuth.user) {
+    await userAuth.loadUser() // Load user on page reload
+  }
 })
 
-const increase = (item) => {
+// Cart actions
+const increase = (item) => { 
   cart.updateQuantity(item.id, item.quantity + 1)
   toast.success(`➕ Increased ${item.name}`)
 }
 
-const decrease = (item) => {
+const decrease = (item) => { 
   cart.updateQuantity(item.id, item.quantity - 1)
   toast.info(`➖ Decreased ${item.name}`)
 }
 
-const remove = (id) => {
-  const item = cart.items.find((p) => p.id === id)
-  if (item) {
+const remove = (id) => { 
+  const item = cart.items.find(p => p.id === id)
+  if(item){
     cart.removeFromCart(id)
     toast.error(`❌ Removed ${item.name}`)
   }
@@ -130,54 +134,53 @@ const handleCheckout = () => {
   }
 }
 
-// Toggle between Login/Register
+// Toggle login/register mode
 const toggleMode = () => {
   isLoginMode.value = !isLoginMode.value
-  form.value = { name: '', email: '', password: '' }
+  Object.assign(form, { name: '', email: '', password: '' })
 }
 
 // Login function
 const login = async () => {
-  if (!form.value.email || !form.value.password) {
+  if (!form.email || !form.password) {
     toast.error('Please fill all fields')
     return
   }
-  const success = await userAuth.login({ email: form.value.email, password: form.value.password })
+
+  const success = await userAuth.login({ email: form.email, password: form.password })
   if (success) {
-    toast.success('Login successful')
-    showAuthPopup.value = false 
-    setTimeout(() => {
-      router.push('/checkout')
-    }, 2000)
+    toast.success('✅ Login successful')
+    showAuthPopup.value = false
+    setTimeout(() => router.push('/checkout'), 1000)
   } else {
-    toast.error('Login failed')
+    // Combine all errors from backend
+    const msg = Object.values(userAuth.errors).flat().join(' ') || '❌ Login failed'
+    toast.error(msg)
   }
 }
 
 // Register function
 const register = async () => {
-  if (!form.value.name || !form.value.email || !form.value.password) {
+  if (!form.name || !form.email || !form.password) {
     toast.error('Please fill all fields')
     return
   }
 
+  console.log("Register called", form) // Debugging
+
   const success = await userAuth.register({ 
-    name: form.value.name, 
-    email: form.value.email, 
-    password: form.value.password 
+    name: form.name, 
+    email: form.email, 
+    password: form.password 
   })
 
   if (success) {
-    toast.success('Registration successful')
-    showAuthPopup.value = false;
-    
-    toast.success('Registration Sucessful!')
-    setTimeout(() => {
-      router.push('/checkout')
-    }, 2000)
+    toast.success('✅ Registration successful')
+    showAuthPopup.value = false
+    setTimeout(() => router.push('/checkout'), 1000)
   } else {
-    toast.error('Registration failed')
+    const msg = Object.values(userAuth.errors).flat().join(' ') || '❌ Registration failed'
+    toast.error(msg)
   }
 }
-
 </script>
